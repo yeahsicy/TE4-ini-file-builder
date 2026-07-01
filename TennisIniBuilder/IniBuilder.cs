@@ -201,10 +201,11 @@ public static class IniBuilder
             }
             string body = $"{h} {w}";
 
+            string country = CountryCodes.Normalize(rec.Country);
             var fields = new Dictionary<string, object>
             {
                 ["Name"] = string.IsNullOrEmpty(rec.Name) ? $"Player {id}" : rec.Name,
-                ["Country"] = string.IsNullOrEmpty(rec.Country) ? "UNK" : rec.Country,
+                ["Country"] = string.IsNullOrEmpty(country) ? "UNK" : country,
                 ["BestRank"] = ceiling,
                 ["Style"] = style,
                 ["Birthdate"] = ConvBirthdate(rec.Dob),

@@ -1,6 +1,6 @@
 # Tennis Players.ini — Session Handoff / Continue Here
 
-_Last updated: 2026-06-30_
+_Last updated: 2026-07-01_
 
 This file lets us resume seamlessly. It captures the finished state, how to run the
 tool, the knowledge from the (now-deleted) Python scripts + `SKILL.md`, and the
@@ -24,6 +24,16 @@ Real-data coverage (as built): countries/DOBs ~100%; handedness 643 WTA + all AT
 career-high 644 WTA + (ATP uses best year-end as peak); **height only ~212/1086 WTA**
 (sparsest field online) + all ATP. Missing fields fall back to estimates.
 
+- **Country codes normalized (`CountryCodes.cs`).** The WTA/ATP feeds emit IOC/ITF
+  abbreviations (SUI, GER, NED, TPE, CHI, XKX, ...) which differ from the ISO 3166-1
+  alpha-3 codes the game country table (`Countries_English.txt`) expects. `IniBuilder`
+  now runs every country through `CountryCodes.Normalize()`, so all builds emit valid
+  ISO alpha-3. Kosovo (no ISO code) falls back to `ALB`. Verified: regenerating the full
+  cached rosters (1866 WTA / 1087 ATP for 2020–2026) yields **0 invalid codes**.
+  Note: the shipping `wta/atp_Players.ini` were produced by the older Python generator, so
+  their per-player skill values differ from this C# tool by ±1–2 (see §4B). They are already
+  country-valid, so they were left as-is rather than regenerated.
+
 ---
 
 ## 2. How to run
@@ -42,14 +52,16 @@ The tool auto-discovers cached JSON in `TennisIniBuilder/data/`, the output dir,
 
 ## 3. Validation checklist (run after any build)
 
-Expect `invalidStyle=0`, `UNK=0`, `emptyDOB=0`; counts ≈ 1086/1087 for 2025–2026.
+Expect `invalidStyle=0`, `UNK=0`, `emptyDOB=0`, `badCountry=0`; counts ≈ 1086/1087 for 2025–2026.
 
 ```powershell
+$iso = Get-Content ..\Countries_English.txt | %{ ($_ -split ';')[2].Trim().ToUpper() } | ?{ $_ -match '^[A-Z]{3}$' }
 foreach($f in 'wta_Players.ini','atp_Players.ini'){ $c=Get-Content $f;
   $p=($c|sls '^\[Player').Count;
   $bad=($c|sls '^Style'|%{($_ -split '=')[1].Trim()}|?{$_ -notin 'Defender','PowerBaseliner','Puncher','Volleyer','Varied','Counter','AllRounder','CounterPuncher','Bulldog'}).Count;
   $unk=($c|sls '^Country\s+=\s+UNK').Count; $nod=($c|sls '^Birthdate\s+=\s*$').Count;
-  "$f players=$p invalidStyle=$bad UNK=$unk emptyDOB=$nod" }
+  $bc=($c|sls '^Country\s*=\s*(\S+)'|%{$_.Matches[0].Groups[1].Value.ToUpper()}|?{$_ -ne 'UNK' -and $iso -notcontains $_}).Count;
+  "$f players=$p invalidStyle=$bad UNK=$unk emptyDOB=$nod badCountry=$bc" }
 ```
 
 ---
