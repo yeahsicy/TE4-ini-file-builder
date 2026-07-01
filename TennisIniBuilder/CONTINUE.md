@@ -6,6 +6,10 @@ This file lets us resume seamlessly. It captures the finished state, how to run 
 tool, the knowledge from the (now-deleted) Python scripts + `SKILL.md`, and the
 concrete open items — especially resolving the **ATP live-fetch** constraint.
 
+> **Session pause — 2026-07-01.** Country-code normalization is implemented, wired in,
+> and validated; both ini files were **regenerated fresh from the C# tool** (no manual
+> edits). Next planned step: tackle the Playwright ATP live-fetch (§4A). See §7.
+
 ---
 
 ## 1. What's done (the win)
@@ -30,9 +34,11 @@ career-high 644 WTA + (ATP uses best year-end as peak); **height only ~212/1086 
   now runs every country through `CountryCodes.Normalize()`, so all builds emit valid
   ISO alpha-3. Kosovo (no ISO code) falls back to `ALB`. Verified: regenerating the full
   cached rosters (1866 WTA / 1087 ATP for 2020–2026) yields **0 invalid codes**.
-  Note: the shipping `wta/atp_Players.ini` were produced by the older Python generator, so
-  their per-player skill values differ from this C# tool by ±1–2 (see §4B). They are already
-  country-valid, so they were left as-is rather than regenerated.
+- **Shipping files regenerated from the C# tool (2026-07-01).** `wta_Players.ini` (1086)
+  and `atp_Players.ini` (1087) were rebuilt at the canonical `--from 2025 --to 2026` range
+  and now pass `invalidStyle=0 UNK=0 emptyDOB=0 badCountry=0`. These are genuine C# output,
+  so per-player skill values differ by ±1–2 from the earlier Python-generated versions
+  (the documented PRNG-parity gap, §4B) — this is expected and accepted for this project.
 
 ---
 
@@ -146,3 +152,11 @@ name must match the `name` field) and have it drive `TennisIniBuilder` as the en
 1. Implement **Constraint A** (Playwright ATP) → makes ATP fully live.
 2. Re-run `--tour both --from 2020 --to 2026`, validate.
 3. (Optional) Recreate the `SKILL.md` under `.github/skills/` driving the tool.
+
+### Country-code change map (files touched this session)
+- `TennisIniBuilder/CountryCodes.cs` — **new**: IOC/ITF → ISO 3166-1 alpha-3 map +
+  `Normalize()`; Kosovo (`XKX`/`KOS`/`XK`) → `ALB`; unknown codes pass through unchanged.
+- `TennisIniBuilder/IniBuilder.cs` — `Build()` now sets `Country` via
+  `CountryCodes.Normalize(rec.Country)` (falls back to `UNK` if empty).
+- `wta_Players.ini`, `atp_Players.ini` — regenerated (see §1).
+- `CONTINUE.md` — this file (§1, §3 checklist now includes `badCountry`, §7).
